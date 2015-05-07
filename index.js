@@ -10,9 +10,6 @@ else
     redis = require("redis").createClient();
 }
 
-var Sequelize = require('sequelize');
-var sql = new Sequelize(process.env.HEROKU_POSTGRESQL_AQUA_URL);
-
 var express = require('express');
 var app = express();
 
