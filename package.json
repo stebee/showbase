@@ -7,11 +7,15 @@
     "start": "node index.js"
   },
   "dependencies": {
-    "express": "~4.9.x",
+    "express": "latest",
       "redis": "latest",
-      "sequelize": "latest",
-      "pg": "latest",
-      "pg-hstore": "latest"
+      "express-form": "latest",
+      "moment": "latest",
+      "bootstrap": "latest",
+      "async": "latest",
+      "mongoose": "latest",
+      "mongodb": "latest"
+
   },
   "engines": {
     "node": "0.12.2"
