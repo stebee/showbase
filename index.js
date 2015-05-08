@@ -20,15 +20,19 @@ app.set('views', __dirname + '/views');
 app.set('view engine', 'jade');
 var bodyParser = require('body-parser');
 
-var forceSSL = function (req, res, next) {
-    if (req.headers['x-forwarded-proto'] !== 'https') {
+var forceSSL = function (req, res, next)
+{
+    if (env == 'development')
+        req.isSSL = false;
+    else if (req.headers['x-forwarded-proto'] !== 'https')
         return res.redirect(['https://', req.get('Host'), req.url].join(''));
-    }
+    else
+        req.isSSL = true;
+
     return next();
 };
 
-if (env != 'development')
-    app.use(forceSSL);
+app.use(forceSSL);
 
 app.set('port', (process.env.PORT || 5000));
 
@@ -62,6 +66,9 @@ var auth = function (req, res, next) {
         return unauthorized(res);
     };
 };
+
+var competitors = require("./routes/competitors");
+competitors.register(app, "/entry/", auth);
 
 
 app.listen(app.get('port'), function() {

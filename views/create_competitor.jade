@@ -1,0 +1,11 @@
+extends competitor_form
+
+block form
+    table.table
+        tbody
+            for field in locals.fields
+                +metafield(field)
+            if locals.isCreate
+                +submit("create", "Create")
+            else
+                +submit("save", "Save")

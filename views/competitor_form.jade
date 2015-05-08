@@ -1,0 +1,39 @@
+extends default_layout
+
+mixin submit(id, text)
+    tr
+        td.col-xs-2
+        td.text-left
+            button.btn.btn-primary.col-xs-2(type="submit", id="submit", name=id) #{text}
+
+mixin stringfield(field)
+    input(type="text", name=field.name, id=field.name, size=50, value=(field.value ? field.value : ""))
+    if field.error
+        span(style="font-weight:italic; font-size: 80%;") &nbsp;#{field.error}
+    else if field.instructions
+        span(style="font-weight:italic; font-size: 80%;") &nbsp;#{field.instructions}
+
+mixin literalfield(field)
+    !=field.value
+
+mixin hiddenfield(field)
+
+mixin metafield(field)
+    if field.type == "hidden"
+        input(id=field.name, name=field.name, type='hidden', value=(field.value ? field.value : ""))
+    else
+        tr(class="alert #{field.error ? 'alert-danger' : ''}")
+            td.col-xs-2 #{field.label}
+            td.text-left
+                if field.type == "literal"
+                    +literalfield(field)
+                else
+                    +stringfield(field)
+
+block content
+    if locals.error
+        p.alert.alert-danger #{locals.error}
+    else if locals.message
+        p #{locals.message}
+    form.form-horizontal(method="POST")
+        block form

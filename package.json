@@ -18,7 +18,10 @@
       "basic-auth": "latest",
       "body-parser": "latest",
       "morgan": "latest",
-      "jade": "latest"
+      "jade": "latest",
+      "validator": "latest",
+      "secure-random": "latest",
+      "base32": "latest"
   },
   "engines": {
     "node": "0.12.2"

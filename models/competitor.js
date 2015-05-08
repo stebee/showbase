@@ -1,18 +1,9 @@
 var mongoose = require('mongoose'),
     Schema = mongoose.Schema;
 
-var _schema = null;
-
 var _threeWay = {type: String, default: 'No', enum: ['No', 'Optional', 'Required']};
 
-exports.registerSchema = function(meta)
-{
-    if (!meta)
-        meta = {};
-
-    if (!_schema)
-    {
-        _schema = new Schema({
+exports.schema = new Schema({
             team: {
                 name: {type: String, index: true},
                 description: String,
@@ -77,14 +68,8 @@ exports.registerSchema = function(meta)
             createdAt: {type: Date, default: Date.now},
             lastEditedAt: {type: Date, default: Date.now}
         });
-    }
 
-    meta.Competitor = _schema;
-
-    return meta;
-}
-
-exports.model = mongoose.model('Competitor', _schema);
+exports.model = mongoose.model('Competitor', exports.schema);
 
 
 /**
