@@ -10,10 +10,9 @@ if (mongoose.connection.readyState == 0)
     mongoose.connect(process.env.MONGOLAB_URI);
 var Competitor = CompetitorSchema.model;
 
-var _breadcrumbs;
 var _root;
 
-function getBreadcrumbs(caller)
+/*function getBreadcrumbs(caller)
 {
     var result = {};
 
@@ -27,6 +26,12 @@ function getBreadcrumbs(caller)
 
     return result;
 }
+ locals.breadcrumbs =  {
+ "1": (page == 1) ? "#" : ""
+ };
+ for (var index = 2; index <= numPages; index++)
+ locals.breadcrumbs[" " + index] = (page == index) ? "#" : "";*/
+
 
 function dump(req, res, next)
 {
@@ -184,10 +189,17 @@ function create_competitor(req, res, next)
     }
 }
 
-function pageOne(req, res, next)
+function edit_competitor(req, res, next)
 {
     if (mongoose.connection.readyState != 1)
         return res.send(500);
+
+    var page = validation.toInt(req.params.page);
+    if (!page || isNaN(page))
+    {
+        console.log("bad page");
+        page = 1;
+    }
 
     //        { label: "Editing URL", type: "literal",  value: "<a href='http://google.com'>Google</a>"}
 
@@ -283,16 +295,15 @@ function edit_competitor(req, res, next)
 exports.register = function(app, root, auth)
 {
     _root = root;
-    _breadcrumbs = [];
 
     if (auth == null)
         auth = [];
 
     app.all(root + 'create', auth, create_competitor);
-    app.all(root, dump);
+    //app.all(root, dump);
 
-    app.all(root + ':slug', pageOne);
-    app.all(root + ':slug/1', pageOne);
+    app.all(root + ':slug', edit_competitor);
+    app.all(root + ':slug/:page', edit_competitor);
 
     // other params should go in between
 /*    app.all(root, handleConsole);
