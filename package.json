@@ -14,8 +14,11 @@
       "bootstrap": "latest",
       "async": "latest",
       "mongoose": "latest",
-      "mongodb": "latest"
-
+      "mongodb": "latest",
+      "basic-auth": "latest",
+      "body-parser": "latest",
+      "morgan": "latest",
+      "jade": "latest"
   },
   "engines": {
     "node": "0.12.2"
