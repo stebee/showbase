@@ -1,28 +1,39 @@
 exports.GENRES = [
-    'Action',
-    'Adventure',
-    'Casual',
-    'Puzzle',
-    'RPG',
-    'Simulation',
-    'Strategy'
+    ['unknown', 'Please select a genre...'],
+    ['action', 'Action'],
+    ['adventure', 'Adventure'],
+    ['casual', 'Casual'],
+    ['puzzle', 'Puzzle'],
+    ['rpg', 'RPG'],
+    ['simulation', 'Simulation'],
+    ['strategy', 'Strategy'],
+    ['other', 'Other:']
 ];
 
 exports.DURATIONS = [
-    '15 minutes or less',
-    '15-60 minutes',
-    'Over 60 minutes'
+    ['unknown', 'Please select a duration...'],
+    ['<15', '15 minutes or less'],
+    ['<60', '15-60 minutes'],
+    ['>60', 'Over 60 minutes'],
+    ['other', 'Other:']
 ];
 
 exports.NUM_PLAYERS = [
-    '1',
-    '2',
-    '2 to 4',
-    '4'
+    ['1', '1'],
+    ['2', '2'],
+    ['3', '3'],
+    ['4', '4']
+];
+
+exports.GALLERY_STATE = [
+    ['unknown', 'Please select a value...'],
+    ['uploaded', 'Uploaded but not yet approved'],
+    ['approved', 'Uploaded and approved'],
+    ['other', 'Other--please explain:']
 ];
 
 exports.KEYWORDS = [
-    'abstract',
+    ['abstract', 'abstract'],
     ['big', 'big game'],
     ['narrative', 'interactive narrative'],
     ['art', 'art game'],
@@ -89,65 +100,72 @@ exports.VENUES = [
 ];
 
 exports.HARDWARE_REQUIREMENTS = [
-    'Headphones',
-    'Microphone',
-    'Projector',
-    'Speakers',
-    'Network'
+    ['headphones', 'Headphones'],
+    ['mic', 'Microphone'],
+    ['projector', 'Projector'],
+    ['speakers', 'Speakers'],
+    ['network', 'Network']
+];
+
+exports.SCREENSHOT_SOURCE = [
+    ['unknown', 'Please select one...'],
+    ['gallery', 'Our screenshots were uploaded as part of our Game Gallery submission'],
+    ['ellen', 'We will email our screenshots to ellen.beeman@digipen.edu separately'],
+    ['other', 'Other:']
 ];
 
 exports.PLATFORMS = [
-    'Android Phone',
-    'Android Tablet',
-    'Apple OSX',
-    'Apple Watch',
-    'Atari 2600',
-    'Google Glass',
-    'iPad',
-    'iPhone',
-    'iPod Touch',
-    'Nintendo DS',
-    'Ouya',
-    'PC',
-    'Physical or Board Game',
-    'Playstation 4',
-    'Wii',
-    'Wii U',
-    'Windows Phone',
-    'Xbox 360',
-    'Xbox One',
-    'Browser (Flash)',
-    'Browser (Unity)',
-    'Browser (HTML5)',
-    'Browser (WebGL)'
+    ['pc', 'PC Download'],
+    ['andphone', 'Android Phone'],
+    ['andtab', 'Android Tablet'],
+    ['osx', 'Apple OSX'],
+    ['iwatch', 'Apple Watch'],
+    ['atari2600', 'Atari 2600'],
+    ['glass', 'Google Glass'],
+    ['ipad', 'iPad'],
+    ['iphone', 'iPhone'],
+    ['itouch', 'iPod Touch'],
+    ['nds', 'Nintendo DS'],
+    ['ouya', 'Ouya'],
+    ['physical', 'Physical or Board Game'],
+    ['ps4', 'Playstation 4'],
+    ['wii', 'Wii'],
+    ['wiiu', 'Wii U'],
+    ['winph', 'Windows Phone'],
+    ['360', 'Xbox 360'],
+    ['xbone', 'Xbox One'],
+    ['flash', 'Browser (Flash)'],
+    ['unityweb', 'Browser (Unity)'],
+    ['html5', 'Browser (HTML5)'],
+    ['webgl', 'Browser (WebGL)']
 ];
 
 exports.INPUT_DEVICES = [
-    'D-Pad',
-    'Dance Pad',
-    'Dual analog sticks',
-    'fitbit',
-    'Gamepad',
-    'Guitar Controller',
-    'Joystick',
-    'Keyboard',
-    'Kinect',
-    'Leap Motion',
-    'Mouse - 1 button',
-    'Mouse - 2 button',
-    'Mouse - 2 Button w/ Scroller',
-    'Neurosky MindSet',
-    'Oculus Rift',
-    'PlayStation Controller (Wired)',
-    'PlayStation Controller (Wireless)',
-    'PlayStation Move Controller',
-    'Trackball',
-    'Trackpad',
-    'Web Camera',
-    'Wii Nunchuck',
-    'Wiimote',
-    'Wild Divine IOM Active Feedback Hardware',
-    'Xbox Controller',
-    'Xbox Controllers x 2',
-    'Xbox Controllers x 4'
+    ['dpad', 'D-Pad'],
+    ['dance', 'Dance Pad'],
+    ['dualstick', 'Dual analog sticks'],
+    ['fitbit', 'fitbit'],
+    ['gamepad', 'Gamepad'],
+    ['guitar', 'Guitar Controller'],
+    ['joystick', 'Joystick'],
+    ['keyboard', 'Keyboard'],
+    ['kinect', 'Kinect'],
+    ['leap', 'Leap Motion'],
+    ['mouse1', 'Mouse - 1 button'],
+    ['mouse2', 'Mouse - 2 button'],
+    ['mousewheel', 'Mouse - 2 Button w/ Scroller'],
+    ['mindset', 'Neurosky MindSet'],
+    ['rift', 'Oculus Rift'],
+    ['pswired', 'PlayStation Controller (Wired)'],
+    ['pswireless', 'PlayStation Controller (Wireless)'],
+    ['psmove', 'PlayStation Move Controller'],
+    ['trackball', 'Trackball'],
+    ['trackpad', 'Trackpad'],
+    ['webcam', 'Web Camera'],
+    ['nunchuck', 'Wii Nunchuck'],
+    ['wiimote', 'Wiimote'],
+    ['iom', 'Wild Divine IOM Active Feedback Hardware'],
+    ['xbox', 'Xbox Controller'],
+    ['xbox2', 'Xbox Controllers x 2'],
+    ['xbox4', 'Xbox Controllers x 4']
 ];

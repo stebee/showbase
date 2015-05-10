@@ -11,6 +11,8 @@ if (mongoose.connection.readyState == 0)
     mongoose.connect(process.env.MONGOLAB_URI);
 var Competitor = CompetitorSchema.model;
 
+var constants = require('../models/constants');
+
 var _root;
 
 /*function getBreadcrumbs(caller)
@@ -44,7 +46,7 @@ function dump(req, res, next)
     res.render('plain', { body: JSON.stringify(competitor) });
 }
 
-function multitier_write(key, value, dest)
+function multitier_write(key, value, dest, accessor, field)
 {
     if (key.indexOf('_') > 0)   // NOT -1, because I don't want to change initial underscore...
     {
@@ -54,16 +56,20 @@ function multitier_write(key, value, dest)
         if (!(top in dest))
             dest[top] = {};
 
-        return multitier_write(parts.join('_'), value, dest[top]);
+        return multitier_write(parts.join('_'), value, dest[top], accessor, field);
     }
     else
     {
-        dest[key] = value;
+        if (accessor)
+            dest[key] = accessor.setter(value, field);
+        else
+            dest[key] = value;
+
         return value;
     }
 }
 
-function multitier_read(key, src)
+function multitier_read(key, src, accessor, field)
 {
     if (key.indexOf('_') > 0)   // NOT -1, because I don't want to change initial underscore...
     {
@@ -73,11 +79,14 @@ function multitier_read(key, src)
         if (!(top in src))
             src[top] = {};
 
-        return multitier_read(parts.join('_'), src[top]);
+        return multitier_read(parts.join('_'), src[top], accessor, field);
     }
     else
     {
-        return src[key];
+        if (accessor)
+            return accessor.getter(src[key], field);
+        else
+            return src[key];
     }
 }
 
@@ -134,6 +143,10 @@ function synchronize_fields(fields, values, form)
 {
     var valid = true;
 
+    var writing = true;
+    if (!form)
+        writing = false;
+
     for (key in fields)
     {
         var field = fields[key];
@@ -142,37 +155,50 @@ function synchronize_fields(fields, values, form)
             continue;
 
         var okay = true;
-        if (form && (field.name in form))
-        {
-            if (field.validation)
-            {
-                var validator = _validators[field.validation];
-                if (validator)
-                {
-                    if (!validator.test(form[field.name]))
-                    {
-                        okay = false;
-                        valid = false;
 
-                        if (validator.error)
-                            field.error = validator.error;
-                        else
-                            field.error = "Not valid!";
-                    }
+        var accessor = null;
+        if (field.accessor)
+            accessor = _accessors[field.accessor];
+
+        if (writing)
+        {
+            var value = null;
+            if (field.name in form)
+                value = form[field.name];
+            else if (field.type == "truefalse")
+            {
+                // Stupid HTML. Checkboxes indicate false by being ABSENT. >.<
+                value = false;
+            }
+
+            var validator = null;
+            if (field.validation)
+                validator = _validators[field.validation];
+            else if (accessor)
+                validator = accessor.validator;
+
+            if (validator)
+            {
+                if (!validator.test(form[field.name], field))
+                {
+                    okay = false;
+                    valid = false;
+
+                    if (validator.error)
+                        field.error = validator.error;
+                    else
+                        field.error = "Not valid!";
                 }
             }
-        }
 
-        if (form)
-        {
             if (okay)
-                field.value = multitier_write(field.name, form[field.name], values);
+                field.value = multitier_write(field.name, value, values, accessor, field);
             else
-                field.value = form[field.name];
+                field.value = value;
         }
-        else
+        else if (!writing)
         {
-            field.value = multitier_read(field.name, values);
+            field.value = multitier_read(field.name, values, accessor, field);
             if (field.initial && (field.value === undefined || field.value === null))
                 field.value = field.initial;
         }
@@ -205,13 +231,273 @@ var _validators = {
         error: "Must be a valid phone number"
     },
 
+    urlOrEmpty: {
+        test: function(str) {
+            var trimmed = validation.trim(str);
+            if (!trimmed)
+                return true;
+            return validation.isURL(trimmed, {allow_underscores: true});
+        }
+    },
+
+    int: {
+        test: function(str) {
+            return validation.isInt(str, 0, 9999);
+        },
+        error: "Must be an integer"
+    },
+
     "words=150": {
         test: function(str) {
             return (wordcount(str) <= 150);
         },
         error: "Must be 150 words or fewer"
+    },
+
+
+    "words=100": {
+        test: function(str) {
+            return (wordcount(str) <= 100);
+        },
+        error: "Must be 100 words or fewer"
+    },
+
+    "words=300": {
+        test: function(str) {
+            return (wordcount(str) <= 300);
+        },
+        error: "Must be 300 words or fewer"
     }
 };
+
+function find_in_tuples(str, range)
+{
+    for (var key = 0; key < range.length; key++)
+    {
+        if (range[key][0] == str)
+            return key;
+    }
+
+    return -1;
+}
+
+var _accessors = {
+    simpleArray: {
+        getter: function(column) {
+            var result = "";
+            var first = true;
+            for (var key = 0; key < column.length; key++)
+            {
+                if (first)
+                    first = false;
+                else
+                    result = result + "\n";
+
+                result = result + column[key];
+            }
+            return result;
+        },
+        setter: function(str) {
+            var results = [];
+            var rows = str.split(/[\r\n;]+/);
+            for (var key in rows)
+            {
+                var row = validation.trim(rows[key]);
+                if (!row)
+                    continue;
+                results.push(row);
+            }
+            return results;
+        },
+        validator: {
+            test: function(str, field) {
+                if (!field)
+                    return true;
+
+                var max = 0;
+                if (field.max)
+                    max = validation.toInt(field.max);
+
+                var min = 0;
+                if (field.min)
+                    min = validation.toInt(field.min);
+
+                if (min == 0 && max == 0)
+                    return true;
+
+                var rows = str.split(/[\r\n;]+/);
+                var count = 0;
+                for (var key in rows)
+                {
+                    var row = validation.trim(rows[key]);
+                    if (!row)
+                        continue;
+                    ++count;
+                }
+
+                if (max > 0 && count > max)
+                    return false;
+
+                if (count < min)
+                    return false;
+
+                return true;
+            },
+            error: "Please provide the requested number of entries, one per line"
+        }
+    },
+
+    roster: {
+        getter: function(column) {
+            var result = "";
+            var first = true;
+            for (var key = 0; key < column.length; key++)
+            {
+                if (first)
+                    first = false;
+                else
+                    result = result + "\n";
+
+                result = result + column[key].name;
+                result = result + ", ";
+                result = result + column[key].role;
+            }
+            return result;
+        },
+        setter: function(str) {
+            var results = [];
+            var rows = str.split(/[\r\n;]+/);
+            for (var key in rows)
+            {
+                if (!rows[key])
+                    continue;
+
+                var parts = rows[key].split(',');
+                var result = {};
+                result.name = validation.trim(parts[0]);
+                result.role = validation.trim(parts[1]);
+                results.push(result);
+            }
+            return results;
+        },
+        validator: {
+            test: function(str) {
+                // TODO
+                return true;
+            },
+            error: "Each line must consist of a name, a comma and their role"
+        }
+    },
+
+    keywords: {
+        getter: function(column, field) {
+            var results = { };
+
+            for (var key = 0; key < column.length; key++)
+            {
+                if (!field)
+                    results[column[key]] = "on";
+                else
+                {
+                    var match = find_in_tuples(column[key], field.range);
+                    if (match < 0)
+                    {
+                        if (field.acceptOther)
+                            results['other'] = column[key];
+                    }
+                    else
+                        results[column[key]] = "on";
+                }
+            }
+
+            return results;
+        },
+        setter: function(dict, field) {
+            // If we set up the form right, then keywords should come in as a dictionary
+            // of truthy values.
+            var results = [];
+            var other = "";
+            for (var key in dict)
+            {
+                if (field && field.acceptOther && key == 'other')
+                    other = dict[key];
+                else if (Boolean(dict[key]))
+                    results.push(key);
+            }
+            if (other)
+                results.push(other);
+            return results;
+        },
+        validator: {
+            test: function(dict, field) {
+                var count = 0;
+                var max = 0;
+                if (field.max)
+                    max = validation.toInt(field.max);
+
+                var min = 0;
+                if (field.min)
+                    min = validation.toInt(field.min);
+
+                for (var key in dict)
+                {
+                    if (Boolean(dict[key]))
+                        ++count;
+                }
+
+                if (max > 0 && count > max)
+                    return false;
+
+                if (count < min)
+                    return false;
+
+                return true;
+            },
+            error: "Please check a number of boxes within the required range"
+        }
+    },
+
+    combo: {
+        getter: function(column, field) {
+            console.log(JSON.stringify(column));
+            if (!column)
+                return { canonical: field.range[0][0] };
+
+            for (var key = 0; key < field.range.length; key++)
+                if (field.range[key][0] == column)
+                    return { canonical: column };
+
+            return { canonical: field.range[field.range.length - 1][0], other: column };
+        },
+        setter: function(dict) {
+            if (dict.other)
+                return dict.other;
+            else
+                return dict.canonical;
+        },
+        validator: {
+            test: function(dict, field) {
+                console.log(JSON.stringify(dict));
+                var index = -1;
+                if (field.range && dict.canonical)
+                {
+                    for (var key = 0; key < field.range.length; key++)
+                        if (field.range[key][0] == dict.canonical)
+                        {
+                            index = key;
+                            break;
+                        }
+                }
+
+                if (index == field.range.length - 1)
+                    return validation.trim(dict.other);
+
+                return (index > 0);
+            },
+            error: "Please select a value or enter a custom value"
+        }
+    }
+}
 
 function create_competitor(req, res, next)
 {
@@ -291,10 +577,33 @@ function create_competitor(req, res, next)
 
 var _pages = [
     {
-        heading: "The Basics",
+        heading: "Status",
         fields: [
             { label: "Game Title", name: "title", validation: "nonEmpty" },
             { label: "Team Name", name: "team_name", validation: "nonEmpty" },
+            { type: "spacer" },
+            { label: "Game Gallery", name: "galleryState", type: "combo", accessor: "combo", range: constants.GALLERY_STATE },
+            { type: "spacer" },
+            { grouplabel: "Current State",   name: "isDone", type: "truefalse", label: "The game is finished, and/or our team does not intend to work on it any further." },
+            { label: "Known Bugs", name: "knownBugs", type: "paragraph", validation: "words=300", instructions: "Describe any known bugs in your game." }
+        ]
+    },
+
+    {
+        heading: "Media",
+        fields: [
+            { label: "Game Gallery", name: "galleryState", type: "combo", accessor: "combo", range: constants.GALLERY_STATE },
+            { label: ">URL", name: "galleryURL", validation: "urlOrEmpty" },
+            { label: ">Size", name: "gallerySize", validation: "int", instructions: "(in megabytes, rounded up to the next integer)" },
+            { type: "spacer" },
+            { label: "Screenshots", name: "screenshotState", type: "combo", accessor: "combo", range: constants.SCREENSHOT_SOURCE, instructions: "You must provide at least three high-res JPEG or PNG images (300dpi preferred)." },
+            { label: "Video URL", name: "videoURL", validation: "nonEmpty", instructions: "You must provide a link to a YouTube or Vimeo video of your game, between 60 second and 3 minutes in length." }
+        ]
+    },
+
+    {
+        heading: "Key Contacts",
+        fields: [
             { label: "Primary Contact", name: "team_primaryContact_name", validation: "nonEmpty", instructions: "The first person we should contact with questions or problems" },
             { label: ">Email", name: "team_primaryContact_email", validation: "email" },
             { label: ">Phone", name: "team_primaryContact_phone", validation: "phone" },
@@ -305,6 +614,23 @@ var _pages = [
     },
 
     {
+        heading: "The Team",
+        fields: [
+            { label: "Team Members", name: "team_roster", type: "array", accessor: "roster", instructions: "One team member per line, with their role following a comma after the name. Example: Jane Doe, International Woman of Mystery." },
+            { type: "spacer" },
+            { label: "Team Twitter Account", name: "team_twitter", instructions: "(if any)" },
+            { label: "Team Facebook Page", name: "team_facebook", instructions: "(if any)" },
+            { label: "Team Website", name: "team_website", instructions: "(if any)" },
+            { type: "spacer" },
+            { grouplabel: "Is anyone on your team...",   name: "team_hasURM", type: "truefalse", label: "A member of a minority, underserved or underrepresented racial or ethnic group in your region of residence" },
+            {                                       name: "team_hasWoman", type: "truefalse", label: "A woman (including transgender)" },
+            {                                       name: "team_hasDisabled", type: "truefalse", label: "Disabled" },
+            {                                       name: "team_hasLGBT", type: "truefalse", label: "LGBT" }
+        ]
+    },
+
+
+    {
         heading: "Background",
         fields: [
             { label: "Team Description", name: "team_description", type: "paragraph", validation: "words=150", instructions: "Please provide a brief description of your team, the number of members, working philosophy, the context in which the work was creative, e.g., student team, arts collective, skunkworks within a larger development studio, as well as your work style, e.g., distributed, co-located, etc.; have distinct roles or all work on everything, etc. Include a sentence or two on how the team members met. (max. 150 words)" },
@@ -312,11 +638,41 @@ var _pages = [
         ]
     },
 
+    {
+        heading: "Audience",
+        fields: [
+            { label: "Genre", name: "genre", type: "combo", accessor: "combo", range: constants.GENRES },
+            { label: "Keywords", name: "keywords", type: "keywords", max: 3, min: 1, range: constants.KEYWORDS, accessor: "keywords", instructions: "Please select one to three" },
+            { label: "Platforms", name: "distributionPlatforms", type: "keywords", min: 1, range: constants.PLATFORMS, accessor: "keywords", acceptOther: true, instructions: "Check all platforms your game supports" },
+            { label: "Languages", name: "languages", type: "array", min: 1, accessor: "simpleArray", rows: 3, instructions: 'What human languages (e.g., "English", not "C++") does your game support?' }
+        ]
+    },
+
 
     {
-        heading: "The Team",
+        heading: "Concept",
         fields: [
-            { label: "Team Members", name: "team_roster", type: "array", instructions: "One team member per line, with their role following a comma after the name. Example: Jane Doe, International Woman of Mystery." }
+            { label: "Game Description", name: "description", type: "paragraph", validation: "words=150", instructions: "Please provide a brief description of your game that is as specific as possible about the game mechanic, aesthetics, narrative (if applicable) and experience of playing the game. This gives an overview of your goals with the game, and who the game’s audience may be. It will guide the assignment of judges to your game, and be those judge’s first impression. (max. 150 words)" },
+            { label: "Artistic Statement", name: "vision", type: "paragraph", validation: "words=300", instructions: "Please discuss the vision and inspiration behind the game, the context in which it was produced (art game, student game, etc.), and your goals for the design. This is your opportunity to explain to the judges why you made the game, and why you made the choices you did in designing and building it. Point out any creative decisions you feel particularly proud of, or that are particularly important to understanding the game. (max 300 words)" }
+        ]
+    },
+
+    {
+        heading: "Installing the Game",
+        fields: [
+            { label: "Installation Instructions", name: "installationInstructions", type: "paragraph", validation: "words=100", instructions: "Please enter instructions on how to install and launch the game. Please be explicit about desired technology, and any non-traditional steps taken to install the software. (max. 100 words)" },
+            { label: "Input Devices", name: "inputDevices", type: "keywords", range: constants.INPUT_DEVICES, accessor: "keywords", acceptOther: true, instructions: "Check all input devices your game needs" },
+            { label: "Other Hardware", name: "hardwareRequirements", type: "keywords", range: constants.HARDWARE_REQUIREMENTS, accessor: "keywords", acceptOther: true, instructions: "Check any other hardware your game needs" },
+            { label: "Installation Instructions", name: "softwareRequirements", type: "paragraph", validation: "words=150", instructions: "If your game requires any pre-installed software to run, provide installation instructions and links to the sofware here (max. 150 words)" }
+        ]
+    },
+
+    {
+        heading: "Playing the Game",
+        fields: [
+            { label: "Duration", name: "duration", type: "combo", accessor: "combo", range: constants.DURATIONS, instructions: "Approximately how long does one play session last?" },
+            { label: "Number of Players", name: "players", type: "keywords", min: 1, range: constants.NUM_PLAYERS, accessor: "keywords", acceptOther: true },
+            { label: "Gameplay Instructions", name: "gameplayInstructions", type: "paragraph", validation: "words=300", instructions: "Please enter instructions on how to play the game. Include your desire to have judges play or not play tutorials, levels you want judges to begin on, and a point you’d like judges to reach to see the full breadth of the game. If this point requires a massive time investment, consider providing a shortcut, and instructions on how to access it. INCLUDE ALL OF YOUR CHEAT CODES HERE! (max 300 words)" }
         ]
     },
 
@@ -325,6 +681,25 @@ var _pages = [
         fields: []
     }
 ];
+
+function get_breadcrumbs(page, slug)
+{
+    var results = [];
+
+    for (var key = 0; key < _pages.length; key++)
+    {
+        var str = (key+1).toString();
+        var crumb = [ str ];
+        if (key == page)
+            crumb.push('#');
+        else
+            crumb.push(_root + slug + '/' + str);
+
+        results.push(crumb);
+    }
+
+    return results;
+}
 
 function sanitize_page(page)
 {
@@ -349,10 +724,12 @@ function edit_competitor(req, res, next)
     var page = sanitize_page(validation.toInt(req.params.page) - 1);
     locals.isPrev = (page > 0);
     locals.isNext = (page < (_pages.length - 1));
+    locals.breadcrumbs = get_breadcrumbs(page, req.params.slug);
 
     locals.heading = _pages[page].heading;
     var fields = JSON.parse(JSON.stringify(_pages[page].fields));
     locals.fields = fields;
+    locals.message = _pages[page].message;
 
     var query = Competitor.findOne().where('authSlug', req.params.slug);
     var select = "";
@@ -363,6 +740,9 @@ function edit_competitor(req, res, next)
     }
     query.select(select);
     query.exec(function(err, competitor) {
+        if (err || !competitor)
+            return res.send(404);
+
         if (req.method == 'GET')
         {
             if (page == 0)
@@ -405,6 +785,8 @@ function edit_competitor(req, res, next)
                     if (newPage != page)
                         return res.redirect(_root + req.params.slug + '/' + (newPage + 1).toString());
                 }
+
+                console.log(JSON.stringify(locals));
 
                 res.render('edit_competitor', locals);
             });

@@ -6,46 +6,147 @@ mixin submit(id, text)
         td.text-left
             button.btn.btn-primary.col-xs-2(type="submit", id=id, name=id) #{text}
 
+mixin fieldlabel(field)
+    if !field.label
+        td.col-xs-2
+    else if field.label[0] == '>'
+        td.col-xs-2.text-right #{field.label.substring(1)}
+    else
+        td.col-xs-2 #{field.label}
+
+mixin fieldcomment(field)
+    if field.error
+        br
+        span(style="font-weight:italic; font-size: 80%;") &nbsp;#{field.error}
+    else if field.instructions
+        br
+        span(style="font-weight:italic; font-size: 80%;") &nbsp;#{field.instructions}
+
 mixin textfield(field, rows)
-    textarea(name=field.name, id=field.name, cols=100, rows=rows) #{field.value}
+    +fieldlabel(field)
+    td.text-left
+        textarea(name=field.name, id=field.name, cols=100, rows=rows) #{field.value}
+        +fieldcomment(field)
 
 mixin stringfield(field)
-    input(type="text", name=field.name, id=field.name, size=75, value=(field.value ? field.value : ""))
+    +fieldlabel(field)
+    td.text-left
+        input(type="text", name=field.name, id=field.name, size=75, value=(field.value ? field.value : ""))
+        +fieldcomment(field)
 
 mixin arrayfield(field, rows)
-    textarea(name=field.name, id=field.name, cols=50, rows=rows) #{field.value}
+    +fieldlabel(field)
+    td.text-left
+        textarea(name=field.name, id=field.name, cols=50, rows=rows) #{field.value}
+        +fieldcomment(field)
+
+mixin truefalsefield(field)
+    if field.grouplabel
+        td.col-xs-2 #{field.grouplabel}
+    else
+        td.col-xs-2
+    td.text-left
+        input(type="checkbox", id=field.name, name=field.name, checked=field.value)
+        |&nbsp;&nbsp;#{field.label}
+        +fieldcomment(field)
 
 mixin literalfield(field)
-    !=field.value
+    +fieldlabel(field)
+    td.text-left
+        !=field.value
 
-mixin hiddenfield(field)
+mixin keywordsfield(field, across)
+    if field.label
+        td.col-xs-2 #{field.label}
+    else
+        td.col-xs-2
+    td
+        table.table-condensed
+            tbody
+                - var rows = field.range.length / across
+                - for(var row = 0; row < rows; row++) {
+                    tr
+                        - for (var column = 0; column < across; column++) {
+                            - var index = (row * across) + column
+                            if index < field.range.length
+                                - var value = field.range[index][0]
+                                - var id = field.name + '[' + value + ']'
+                                - var checked = false
+                                if field.value
+                                    - checked = Boolean(field.value[value])
+                                td.col-xs-1
+                                    input(type="checkbox", id=id, name=id, checked=checked)
+                                    |&nbsp;#{field.range[index][1]}
+                        - }
+                    - }
+        if field.acceptOther
+            |Other:&nbsp;
+            input(type="text", name=field.name+'[other]', id=field.name+'[other]', size=75, value=(field.value.other ? field.value.other : ""))
+        +fieldcomment(field)
+
+mixin combofield(field)
+    +fieldlabel(field)
+    td.text-left
+        select(name=field.name+"[canonical]", id=field.name+"[canonical]")
+            - var index = -1
+            - var other = false
+            if !field.value
+                - index = 0
+            else if field.value.canonical
+                - for (var row = 0; row < field.range.length; row++) {
+                    if field.range[row][0] == field.value.canonical
+                        - index = row
+                        - break
+                - }
+            else
+                - other = true
+            if other || index < 0 || index == field.range.length - 1
+                - index = field.range.length - 1
+                - other = true
+                if !field.value.other
+                    - field.value.other = ""
+            - for (var row = 0; row < field.range.length; row++) {
+                option(value=field.range[row][0], selected=(row == index)) #{field.range[row][1]}
+            - }
+        |&nbsp;&nbsp;
+        input(type="text", name=field.name+"[other]", id=field.name+"[other]", size=35, value=(other ? field.value.other : ""))
+        +fieldcomment(field)
+
+mixin dropfield(field)
+    +fieldlabel(field)
+    td.text-left
+        select(name=field.name, id=field.name)
+            for value in field.range
+                option(value=value, selected=(field.value == value)) #{value}
+        +fieldcomment(field)
 
 mixin metafield(field)
     if field.type == "hidden"
         input(id=field.name, name=field.name, type='hidden', value=(field.value ? field.value : ""))
     else
         tr(class="alert #{field.error ? 'alert-danger' : ''}")
-            if !field.label
-                td.col-xs-2
-            else if field.label[0] == '>'
-                td.col-xs-2.text-right #{field.label.substring(1)}
-            else
-                td.col-xs-2 #{field.label}
-            td.text-left
-                if field.type == "literal"
-                    +literalfield(field)
-                else if field.type == "paragraph"
-                    +textfield(field, 12)
-                else if field.type == "array"
-                    +arrayfield(field, 10)
+            if field.type == "literal"
+                +literalfield(field)
+            else if field.type == "truefalse"
+                +truefalsefield(field)
+            else if field.type == "paragraph"
+                +textfield(field, 12)
+            else if field.type == "array"
+                if field.rows
+                    +arrayfield(field, field.rows)
                 else
-                    +stringfield(field)
-                if field.error
-                    br
-                    span(style="font-weight:italic; font-size: 80%;") &nbsp;#{field.error}
-                else if field.instructions
-                    br
-                    span(style="font-weight:italic; font-size: 80%;") &nbsp;#{field.instructions}
+                    +arrayfield(field, 10)
+            else if field.type == "keywords"
+                +keywordsfield(field, 4)
+            else if field.type == "combo"
+                +combofield(field)
+            else if field.type == "droplist"
+                +dropfield(field)
+            else if field.type == "spacer"
+                +fieldlabel(field)
+                td.text-left
+            else
+                +stringfield(field)
 
 block content
     if locals.error

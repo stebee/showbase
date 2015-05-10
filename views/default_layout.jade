@@ -35,19 +35,19 @@ block body
                 div
                     ul.nav.navbar-nav.navbar-inverse
                         if locals.breadcrumbs
-                            each url, name in locals.breadcrumbs
-                                if url=="#"
+                            each tuple in locals.breadcrumbs
+                                if tuple[1] == "#"
                                     li.active
                                         a
-                                            =name
-                                else if url
+                                            =tuple[0]
+                                else if tuple[1]
                                     li
-                                        a(href=url)
-                                            =name
+                                        a(href=tuple[1])
+                                            =tuple[0]
                                 else
                                     li
                                         a
-                                            =name
+                                            =tuple[0]
         div.container
             div.row.clearfix
                 block content

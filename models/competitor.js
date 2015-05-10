@@ -1,6 +1,8 @@
 var mongoose = require('mongoose'),
     Schema = mongoose.Schema;
 
+var constants = require('./constants');
+
 var _threeWay = {type: String, default: 'No', enum: ['No', 'Optional', 'Required']};
 
 exports.schema = new Schema({
@@ -29,7 +31,7 @@ exports.schema = new Schema({
                 ]
             },
 
-            galleryState: {type: String, default: 'Unknown', enum: ['Unknown', 'Uploaded', 'Approved', 'Other' ], index: true},
+            galleryState: {type: String, index: true},
             galleryURL: String,
             gallerySize: Number,
 
@@ -39,7 +41,7 @@ exports.schema = new Schema({
             nature: String,
             genre: String,
             duration: String,
-            players: String,
+            players: [String],
             languages: [String],
             description: String,
             vision: String,
@@ -56,13 +58,12 @@ exports.schema = new Schema({
             ],
             keywords: [String],
             hardwareRequirements: [String],
-            softwareRequirements: [String],
+            softwareRequirements: String,
             inputDevices: [String],
             distributionPlatforms: [String],
-            screenshotURL: [String],
             videoURL: String,
 
-            screenshotRequirementAcknowledged: Boolean,
+            screenshotState: {type: String, index: true},
 
             state: {type: String, index: true},
             createdAt: {type: Date, default: Date.now},
