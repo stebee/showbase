@@ -1,0 +1,17 @@
+extends competitor_form
+
+block form
+    table.table
+        tbody
+            for field in locals.fields
+                +metafield(field)
+            tr
+                td.col-xs-2
+                td.text-left
+                    if locals.isPrev
+                        button.btn.btn-primary.col-xs-2(type="submit", id="_savePrev", name="_savePrev") Prev
+                    |&nbsp;&nbsp;&nbsp;&nbsp;
+                    button.btn.btn-primary.col-xs-2(type="submit", id="_save", name="_save") Save
+                    |&nbsp;&nbsp;&nbsp;&nbsp;
+                    if locals.isNext
+                        button.btn.btn-primary.col-xs-2(type="submit", id="_saveNext", name="_saveNext") Next

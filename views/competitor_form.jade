@@ -4,14 +4,16 @@ mixin submit(id, text)
     tr
         td.col-xs-2
         td.text-left
-            button.btn.btn-primary.col-xs-2(type="submit", id="submit", name=id) #{text}
+            button.btn.btn-primary.col-xs-2(type="submit", id=id, name=id) #{text}
+
+mixin textfield(field, rows)
+    textarea(name=field.name, id=field.name, cols=100, rows=rows) #{field.value}
 
 mixin stringfield(field)
-    input(type="text", name=field.name, id=field.name, size=50, value=(field.value ? field.value : ""))
-    if field.error
-        span(style="font-weight:italic; font-size: 80%;") &nbsp;#{field.error}
-    else if field.instructions
-        span(style="font-weight:italic; font-size: 80%;") &nbsp;#{field.instructions}
+    input(type="text", name=field.name, id=field.name, size=75, value=(field.value ? field.value : ""))
+
+mixin arrayfield(field, rows)
+    textarea(name=field.name, id=field.name, cols=50, rows=rows) #{field.value}
 
 mixin literalfield(field)
     !=field.value
@@ -23,17 +25,34 @@ mixin metafield(field)
         input(id=field.name, name=field.name, type='hidden', value=(field.value ? field.value : ""))
     else
         tr(class="alert #{field.error ? 'alert-danger' : ''}")
-            td.col-xs-2 #{field.label}
+            if !field.label
+                td.col-xs-2
+            else if field.label[0] == '>'
+                td.col-xs-2.text-right #{field.label.substring(1)}
+            else
+                td.col-xs-2 #{field.label}
             td.text-left
                 if field.type == "literal"
                     +literalfield(field)
+                else if field.type == "paragraph"
+                    +textfield(field, 12)
+                else if field.type == "array"
+                    +arrayfield(field, 10)
                 else
                     +stringfield(field)
+                if field.error
+                    br
+                    span(style="font-weight:italic; font-size: 80%;") &nbsp;#{field.error}
+                else if field.instructions
+                    br
+                    span(style="font-weight:italic; font-size: 80%;") &nbsp;#{field.instructions}
 
 block content
     if locals.error
         p.alert.alert-danger #{locals.error}
     else if locals.message
-        p #{locals.message}
+        p.alert.alert-info #{locals.message}
+    if locals.heading
+        p.h3 #{locals.heading}
     form.form-horizontal(method="POST")
         block form

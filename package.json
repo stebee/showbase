@@ -21,7 +21,8 @@
       "jade": "latest",
       "validator": "latest",
       "secure-random": "latest",
-      "base32": "latest"
+      "base32": "latest",
+      "wordcount": "latest"
   },
   "engines": {
     "node": "0.12.2"
