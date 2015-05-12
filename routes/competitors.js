@@ -228,7 +228,7 @@ var _validators = {
         test: function(str) {
             return validation.isMobilePhone(str, 'en-US');
         },
-        error: "Must be a valid phone number"
+        error: 'Must be a valid 10-digit phone number (punctuation optional)--for example, "4255580299"'
     },
 
     urlOrEmpty: {
@@ -374,8 +374,9 @@ var _accessors = {
 
                 var parts = rows[key].split(',');
                 var result = {};
-                result.name = validation.trim(parts[0]);
-                result.role = validation.trim(parts[1]);
+                result.name = validation.trim(parts.shift());
+                result.role = validation.trim(parts.join(','));
+
                 results.push(result);
             }
             return results;
@@ -595,7 +596,7 @@ var _pages = [
         fields: [
             { label: "Game Gallery", name: "galleryState", type: "combo", accessor: "combo", range: constants.GALLERY_STATE },
             { label: ">URL", name: "galleryURL", validation: "urlOrEmpty" },
-            { label: ">Size", name: "gallerySize", validation: "int", instructions: "(in megabytes, rounded up to the next integer)" },
+            { label: ">Size", name: "gallerySize", validation: "int", instructions: "Please enter the size IN MEGABYTES, rounded up to the next integer. If your game is less than 1MB, just put 1." },
             { type: "spacer" },
             { label: "Screenshots", name: "screenshotState", type: "combo", accessor: "combo", range: constants.SCREENSHOT_SOURCE, instructions: "You must provide at least three high-res JPEG or PNG images (300dpi preferred)." },
             { label: "Video URL", name: "videoURL", validation: "nonEmpty", instructions: "You must provide a link to a YouTube or Vimeo video of your game, between 60 second and 3 minutes in length." }
