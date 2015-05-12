@@ -567,7 +567,8 @@ function create_competitor(req, res, next)
             else
             {
                 heading = "Edit Entry";
-                var url = 'http' + (req.isSSL ? 's' : '') + '://' + req.get('Host') + _root + competitor.authSlug;
+		var host =  (process.env.TRUE_HOST || req.get('Host'));
+                var url = 'http' + (req.isSSL ? 's' : '') + '://' + host + _root + competitor.authSlug;
                 fields.push({ label: "Editing URL", type: "literal",  value: "<a href='" + url + "'>" + url + "</a>"});
             }
             res.render('create_competitor', { fields: fields, error: error, heading: heading });

@@ -25,7 +25,7 @@ var forceSSL = function (req, res, next)
     if (env == 'development')
         req.isSSL = false;
     else if (req.headers['x-forwarded-proto'] !== 'https')
-        return res.redirect(['https://', req.get('Host'), req.url].join(''));
+        return res.redirect(['https://', (process.env.TRUE_HOST || req.get('Host')), req.url].join(''));
     else
         req.isSSL = true;
 
