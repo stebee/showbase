@@ -824,8 +824,6 @@ function review_competitor(competitor, callback)
 			page.fields.forEach(function(field, field_index, all_fields) {
 				if (field.name)
 				{
-					field_count += 1;
-
 					var value = multitier_read(field.name, competitor);
 
 					var validator = null;
@@ -836,12 +834,14 @@ function review_competitor(competitor, callback)
 					if (!value)
 						value = "";
 					if (validator)
+					{
+						field_count += 1;
 						okay = validator.test(value, field);
-
-					if (okay)
-						valid_count += 1;
-					else if (verbose)
-						console.log(field.name);
+						if (okay)
+							valid_count += 1;
+						else if (verbose)
+							console.log(field.name);
+					}
 				}
 			});
 		}
