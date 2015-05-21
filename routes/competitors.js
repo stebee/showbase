@@ -39,7 +39,7 @@ var _root;
 function dump(req, res, next)
 {
     if (mongoose.connection.readyState != 1)
-        return res.send(500);
+        return res.sendStatus(500);
 
 //    var query = Level.findOne().where('name', name);
     var competitor = new Competitor();
@@ -460,7 +460,6 @@ var _accessors = {
 
     combo: {
         getter: function(column, field) {
-            console.log(JSON.stringify(column));
             if (!column)
                 return { canonical: field.range[0][0] };
 
@@ -478,7 +477,6 @@ var _accessors = {
         },
         validator: {
             test: function(dict, field) {
-                console.log(JSON.stringify(dict));
                 var index = -1;
                 if (field.range && dict.canonical)
                 {
@@ -503,7 +501,7 @@ var _accessors = {
 function create_competitor(req, res, next)
 {
     if (mongoose.connection.readyState != 1)
-        return res.send(500);
+        return res.sendStatus(500);
 
     // error, label, name, value, instructions, validator, invalid
     var fields = [
@@ -717,7 +715,7 @@ function sanitize_page(page)
 function edit_competitor(req, res, next)
 {
     if (mongoose.connection.readyState != 1)
-        return res.send(500);
+        return res.sendStatus(500);
 
     var locals = {
         error: null
@@ -765,6 +763,7 @@ function edit_competitor(req, res, next)
                     else
                     {
                         competitor.lastEditedAt = Date.now();
+						competitor.stateValid = false;
                         competitor.save(callback);
                     }
                 }
@@ -787,17 +786,215 @@ function edit_competitor(req, res, next)
                     if (newPage != page)
                         return res.redirect(_root + req.params.slug + '/' + (newPage + 1).toString());
                 }
-
-                console.log(JSON.stringify(locals));
-
                 res.render('edit_competitor', locals);
             });
-
-            console.log(JSON.stringify(req.body));
         }
     });
 }
 
+function page_fields()
+{
+	var results = {};
+	_pages.forEach(function(value, index, all) {
+		var select = [];
+		if (value.fields)
+		{
+			value.fields.forEach(function(field, field_index, fields) {
+				if (field.name)
+				{
+					select.push(field.name);
+				}
+			});
+		}
+		results[value.heading] = select;
+	});
+	return results;
+}
+
+function review_competitor(competitor, callback)
+{
+	var verbose = (process.env.NODE_ENV != "production");
+	var field_count = 0;
+	var valid_count = 0;
+
+	_pages.forEach(function(page, page_index, all_pages) {
+		// page.heading = (eg) "Key Contacts"
+		if (page.fields)
+		{
+			page.fields.forEach(function(field, field_index, all_fields) {
+				if (field.name)
+				{
+					field_count += 1;
+
+					var value = multitier_read(field.name, competitor);
+
+					var validator = null;
+					if (field.validation)
+						validator = _validators[field.validation];
+
+					var okay = true;
+					if (!value)
+						value = "";
+					if (validator)
+						okay = validator.test(value, field);
+
+					if (okay)
+						valid_count += 1;
+					else if (verbose)
+						console.log(field.name);
+				}
+			});
+		}
+	});
+
+	if (field_count < 1)
+		return callback("Configuration error");
+
+	if (verbose)
+		console.log("REVIEWED " + competitor._id + ": " + valid_count + '/' + field_count + ' (' + competitor.authSlug + ')');
+
+	competitor.statePercentage = valid_count / field_count;
+	competitor.stateValid = true;
+	competitor.save(callback);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*	var pages = page_fields();
+
+	async.each(Object.keys(pages), function(key, next) {
+		var select = pages[key];
+		console.log(JSON.stringify(select));
+		if (select)
+		{
+			select.forEach(function(field, index, all) {
+				var value = competitor.get(field);
+				if (typeof(value) == "undefined" || value == null)
+//				console.log(field + ': "' + competitor.get(field) + '" [' + typeof(value) + ']');
+			});
+			next();
+		}
+		else
+		{
+			next();
+		}
+	}, function (err) {
+		if (err)
+			return callback(err);
+
+		// TODO SAVE competitor.state!
+		competitor.stateValid = false;
+		competitor.save(callback);
+	});*/
+
+function review_as_needed(callback)
+{
+	var query = Competitor.find().where('stateValid').ne(true);
+	query.exec(function(err, documents) {
+		if (err)
+			callback(err);
+		else
+			async.each(documents, review_competitor, callback);
+	});
+}
+
+
+
+function get_dashboard(req, res, next)
+{
+	if (mongoose.connection.readyState != 1)
+		return res.sendStatus(500);
+
+	review_as_needed(function(err) {
+		if (err)
+			res.render('plain', { body: err });
+		else
+		{
+			var query = Competitor.find().where({'stateValid': true});
+			query.select('_id title team.name team.primaryContact.email authSlug state createdAt lastEditedAt statePercentage');
+			query.exec(function(err, documents) {
+				if (err)
+					res.render('plain', { body: err });
+				else
+				{
+					var entries = [];
+					documents.forEach(function(document, index, all_documents) {
+						var entry = {};
+						entry.title = document.title;
+						entry.team = "";
+						if (document.team)
+							entry.team = document.team.name;
+						entry.email = "";
+						if (document.team)
+							if (document.team.primaryContact)
+								entry.email = document.team.primaryContact.email;
+						entry.state = document.state;
+						entry.view = _root + 'view/' + document._id;
+						entry.edit = _root + document.authSlug;
+						entry.pct = validation.toInt(0.5 + (document.statePercentage * 100));
+						entry.edited = moment(document.lastEditedAt).format("MMM D 'YY @ HH:mm");
+						entry.created = moment(document.createdAt).format("MMM D 'YY @ HH:mm");
+						entries.push(entry);
+					});
+					res.render('dashboard', { entries: entries });
+				}
+			});
+		}
+	});
+}
+
+function view_entry(req, res, next)
+{
+
+}
 
 exports.register = function(app, root, auth)
 {
@@ -807,8 +1004,10 @@ exports.register = function(app, root, auth)
         auth = [];
 
     app.all(root + 'create', auth, create_competitor);
-    //app.all(root, dump);
+	app.get(root + 'dashboard', auth, get_dashboard);
+	app.get(root + 'view/:id', auth, view_entry);
 
-    app.all(root + ':slug', edit_competitor);
+	// These have to be last, because :slug will catch everything!
     app.all(root + ':slug/:page', edit_competitor);
+	app.all(root + ':slug', edit_competitor);
 }

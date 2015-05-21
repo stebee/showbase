@@ -67,7 +67,10 @@ exports.schema = new Schema({
 
             state: {type: String, index: true},
             createdAt: {type: Date, default: Date.now},
-            lastEditedAt: {type: Date, default: Date.now}
+            lastEditedAt: {type: Date, default: Date.now},
+
+			stateValid: {type: Boolean, default: false},
+			statePercentage: Number
         });
 
 exports.model = mongoose.model('Competitor', exports.schema);

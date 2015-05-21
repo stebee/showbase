@@ -14,7 +14,7 @@ html(lang='en')
         | <script src="/bootstrap/js/respond.min.js"></script>
         | <![endif]-->
         block pagestyle
-    body(style="zoom:1")
+    body(style=(process.env.NODE_ENV != "production" ? "zoom:1; background-color:LightGoldenrodYellow" : "zoom:1"))
         block body
         script(src='/bootstrap/js/bootstrap.min.js')
 

@@ -1,0 +1,35 @@
+extends default_layout
+
+mixin progressbar(begin, end, now)
+    div.progress
+        div.progress-bar(role="progressbar", aria-valuenow=now, aria-valuemin=begin, aria-valuemax=end, style="min-width:3em; width:" + (now*100/end) + "%") #{now}%
+
+block content
+    if locals.error
+        p.alert.alert-danger #{locals.error}
+    else if locals.message
+        p.alert.alert-info #{locals.message}
+    if locals.heading
+        p.h3 #{locals.heading}
+    table.table
+        thead
+            tr
+                th Game
+                th Team
+                th Created
+                th Last Edited
+                th Status
+        tbody
+            for entry in locals.entries
+                tr
+                    td.col-xs-1
+                        a(href=entry.view) #{entry.title}
+                        |&nbsp;(
+                        a(href=entry.edit) edit
+                        |)
+                    td.col-xs-1
+                        a(href="mailto:" + entry.email) #{entry.team}
+                    td.col-xs-1 #{entry.created}
+                    td.col-xs-1 #{entry.edited}
+                    td.col-xs-1
+                        +progressbar(0, 100, entry.pct)
