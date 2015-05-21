@@ -1,6 +1,6 @@
 var async = require('async');
 var CompetitorSchema = require('../models/competitor');
-var moment = require('moment');
+var moment = require('moment-timezone');
 var validation = require('validator');
 var wordcount = require('wordcount');
 var base32 = require('base32');
@@ -980,8 +980,8 @@ function get_dashboard(req, res, next)
 						entry.view = _root + 'view/' + document._id;
 						entry.edit = _root + document.authSlug;
 						entry.pct = validation.toInt(0.5 + (document.statePercentage * 100));
-						entry.edited = moment(document.lastEditedAt).format("MMM D 'YY @ HH:mm");
-						entry.created = moment(document.createdAt).format("MMM D 'YY @ HH:mm");
+						entry.edited = moment(document.lastEditedAt).tz('America/Los_Angeles').format("MMM D 'YY @ HH:mm");
+						entry.created = moment(document.createdAt).tz('America/Los_Angeles').format("MMM D 'YY @ HH:mm");
 						entries.push(entry);
 					});
 					res.render('dashboard', { entries: entries });
