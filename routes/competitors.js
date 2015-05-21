@@ -1004,6 +1004,7 @@ exports.register = function(app, root, auth)
         auth = [];
 
     app.all(root + 'create', auth, create_competitor);
+	app.get(root, auth, get_dashboard);
 	app.get(root + 'dashboard', auth, get_dashboard);
 	app.get(root + 'view/:id', auth, view_entry);
 
