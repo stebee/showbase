@@ -283,6 +283,9 @@ function find_in_tuples(str, range)
 
 var _accessors = {
     simpleArray: {
+		beautifier: function(gotten) {
+			return gotten;
+		},
         getter: function(column) {
             var result = "";
             var first = true;
@@ -348,6 +351,9 @@ var _accessors = {
     },
 
     roster: {
+		beautifier: function(gotten) {
+			return gotten;
+		},
         getter: function(column) {
             var result = "";
             var first = true;
@@ -391,6 +397,39 @@ var _accessors = {
     },
 
     keywords: {
+		beautifier: function(gotten, field) {
+			if (!field)
+				return JSON.stringify(result);	// Not a good response, but better than crashing
+
+			var result = "";
+			var first = true;
+
+			for (var key in gotten)
+			{
+				var val = "";
+
+				if (gotten[key] != "on")
+					continue;	// Not sure how this could happen, but better safe than sorry...
+
+				var match = find_in_tuples(key, field.range);
+				if (match < 0)
+					val = key;
+				else
+					val = field.range[match][1];
+
+				if (val)
+				{
+					if (first)
+						first = false;
+					else
+						result = result + "; ";
+
+					result = result + val;
+				}
+			}
+
+			return result;
+		},
         getter: function(column, field) {
             var results = { };
 
@@ -459,6 +498,23 @@ var _accessors = {
     },
 
     combo: {
+		beautifier: function(gotten, field) {
+			if (!field)
+				return JSON.stringify(result);	// Not a good response, but better than crashing
+
+			if (gotten.other)
+				return gotten.other;
+			else
+			{
+				var match = find_in_tuples(gotten.canonical, field.range);
+				if (match < 0)
+					return gotten.canonical;
+				else if (match == 0)
+					return "[none]";
+				else
+					return field.range[match][1];
+			}
+		},
         getter: function(column, field) {
             if (!column)
                 return { canonical: field.range[0][0] };
@@ -584,7 +640,7 @@ var _pages = [
             { type: "spacer" },
             { label: "Game Gallery", name: "galleryState", type: "combo", accessor: "combo", range: constants.GALLERY_STATE },
             { type: "spacer" },
-            { grouplabel: "Current State",   name: "isDone", type: "truefalse", label: "The game is finished, and/or our team does not intend to work on it any further." },
+            { grouplabel: "Current State",   name: "isDone", type: "truefalse", label: "The game is finished, and/or our team does not intend to work on it any further.", terselabel: "All done?" },
             { label: "Known Bugs", name: "knownBugs", type: "paragraph", validation: "words=300", instructions: "Describe any known bugs in your game." }
         ]
     },
@@ -622,10 +678,10 @@ var _pages = [
             { label: "Team Facebook Page", name: "team_facebook", instructions: "(if any)" },
             { label: "Team Website", name: "team_website", instructions: "(if any)" },
             { type: "spacer" },
-            { grouplabel: "Is anyone on your team...",   name: "team_hasURM", type: "truefalse", label: "A member of a minority, underserved or underrepresented racial or ethnic group in your region of residence" },
-            {                                       name: "team_hasWoman", type: "truefalse", label: "A woman (including transgender)" },
-            {                                       name: "team_hasDisabled", type: "truefalse", label: "Disabled" },
-            {                                       name: "team_hasLGBT", type: "truefalse", label: "LGBT" }
+            { grouplabel: "Is anyone on your team...",   name: "team_hasURM", type: "truefalse", label: "A member of a minority, underserved or underrepresented racial or ethnic group in your region of residence", terselabel: "URM team member?" },
+            {                                       name: "team_hasWoman", type: "truefalse", label: "A woman (including transgender)", terselabel: "Female team member?" },
+            {                                       name: "team_hasDisabled", type: "truefalse", label: "Disabled", terselabel: "Disabled team member?" },
+            {                                       name: "team_hasLGBT", type: "truefalse", label: "LGBT", terselabel: "LGBT team member?" }
         ]
     },
 
@@ -993,7 +1049,68 @@ function get_dashboard(req, res, next)
 
 function view_entry(req, res, next)
 {
+	if (mongoose.connection.readyState != 1)
+		return res.sendStatus(500);
 
+	var _id = null;
+	try
+	{
+		_id = mongoose.Types.ObjectId(req.params.id);
+	}
+	catch (ex)
+	{
+		_id = null;
+	}
+
+	if (!_id)
+		return res.sendStatus(404);
+
+	Competitor.findById(_id, function(err, competitor) {
+		if (!err && !competitor)
+			return res.sendStatus(404);
+
+		if (err)
+		{
+			console.log(err);
+			return res.sendStatus(500);
+		}
+
+		var dump = [];
+
+		_pages.forEach(function(page, page_index, all_pages) {
+			if (page.fields)
+			{
+				page.fields.forEach(function(field, field_index, all_fields) {
+					if (field.name)
+					{
+						var accessor = null;
+						if (field.accessor)
+							accessor = _accessors[field.accessor];
+
+						var pair = { };
+
+						if (field.terselabel)
+							pair.key = field.terselabel;
+						else
+							pair.key = field.label;
+
+						pair.value = multitier_read(field.name, competitor, accessor, field);
+						if (accessor)
+							pair.value = accessor.beautifier(pair.value, field);
+
+						if (typeof(pair.value) == "boolean")
+							pair.value = (pair.value ? "yes" : "no");
+						else if (!pair.value)
+							pair.value = "[none]";
+
+						dump.push(pair);
+					}
+				});
+			}
+		});
+
+		res.render('view_competitor', { title: competitor.title, team: competitor.team.name, fields: dump });
+	});
 }
 
 exports.register = function(app, root, auth)

@@ -1,0 +1,41 @@
+extends default_layout
+mixin fieldlabel(label)
+    if !label
+        td.col-xs-2
+    else if label[0] == '>'
+        td.col-xs-2.text-right #{label.substring(1)}
+    else
+        td.col-xs-2 #{label}
+mixin textfield(pair)
+    td.text-left
+        textarea(readonly=true, cols=100, rows=5) #{pair.value}
+mixin plainfield(pair)
+    td.text-left #{pair.value}
+mixin renderfield(pair)
+    +fieldlabel(pair.key)
+    - if (typeof(pair.value) == "string" && pair.value.indexOf('\n') > 0)
+        +textfield(pair)
+    - else if (typeof(pair.value) == "object")
+        td.text-left #{JSON.stringify(pair.value)}
+    - else
+        +plainfield(pair)
+block content
+    if locals.error
+        p.alert.alert-danger #{locals.error}
+    else if locals.message
+        p.alert.alert-info #{locals.message}
+    if locals.heading
+        p.h4 #{locals.heading}
+    p.h4
+        em #{locals.title}
+        | &nbsp;by&nbsp;
+        em #{locals.team}
+    table.table
+        thead
+            tr
+                th.col-xs-2 Field
+                th.col-xs-4 Value
+        tbody
+            for pair in locals.fields
+                tr
+                    +renderfield(pair)
